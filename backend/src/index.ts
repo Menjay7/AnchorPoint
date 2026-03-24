@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import logger from './utils/logger';
 import transactionsRouter from './api/routes/transactions.route';
 
 dotenv.config();
@@ -24,7 +25,7 @@ app.get('/', (req: Request, res: Response) => {
 /* istanbul ignore next */
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
-    console.log(`Backend service listening at http://localhost:${PORT}`);
+    logger.info(`Backend service listening at http://localhost:${PORT}`);
   });
 }
 

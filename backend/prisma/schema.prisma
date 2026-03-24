@@ -10,17 +10,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Transaction {
-  id              String   @id @default(uuid())
-  userPublicKey   String
-  assetCode       String
-  amount          String
-  type            String   // DEPOSIT or WITHDRAW
-  status          String   // PENDING, COMPLETED, FAILED
-  externalId      String?  @unique
-  stellarTxId     String?  @unique
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+model User {
+  id            String        @id @default(uuid())
+  publicKey     String        @unique
+  email         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  transactions  Transaction[]
 
-  @@index([userPublicKey])
+  @@index([publicKey])
+}
+
+model Transaction {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+  assetCode     String
+  amount        String
+  type          String    // DEPOSIT or WITHDRAW
+  status        String    // PENDING, COMPLETED, FAILED
+  externalId    String?   @unique
+  stellarTxId   String?   @unique
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
 }

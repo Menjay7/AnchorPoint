@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import logger from './utils/logger';
 import transactionsRouter from './api/routes/transactions.route';
+import sep24Router from './api/routes/sep24.route';
 
 dotenv.config();
 

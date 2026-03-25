@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../../config/env';
 
 const JWT_SECRET = config.JWT_SECRET;
+import { extractBearerToken, verifyToken } from '../../services/auth.service';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -11,25 +12,18 @@ export interface AuthRequest extends Request {
 }
 
 export const authMiddleware = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const token = extractBearerToken(req.headers.authorization);
+  if (!token) {
     return res.status(401).json({
       status: 'error',
       message: 'Authentication required. No token provided.'
     });
   }
 
-  const token = authHeader.split(' ')[1];
-
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { sub: string };
-    
-    // In SEP-10, the 'sub' claim is the user's public key
-    req.user = {
-      publicKey: decoded.sub
-    };
-    
+    const decoded = verifyToken(token);
+    // In SEP-10, the `sub` claim is the user's public key.
+    req.user = { publicKey: decoded.sub };
     return next();
   } catch (error) {
     return res.status(401).json({

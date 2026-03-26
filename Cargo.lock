@@ -3,6 +3,7 @@
 version = 4
 
 [[package]]
+<<<<<<< HEAD
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1497,10 +1498,15 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+=======
+name = "anchorpoint"
+version = "0.1.0"
+>>>>>>> 7f5c689 (Fix merge conflict)
 
 [[package]]
 name = "vesting"
 version = "0.1.0"
+<<<<<<< HEAD
 
 [[package]]
 name = "wasi"
@@ -1694,3 +1700,5 @@ name = "zmij"
 version = "1.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b8848ee67ecc8aedbaf3e4122217aff892639231befc6a1b58d29fff4c2cabaa"
+=======
+>>>>>>> 7f5c689 (Fix merge conflict)

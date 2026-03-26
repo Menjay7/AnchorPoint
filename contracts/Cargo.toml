@@ -1,5 +1,5 @@
 [workspace]
-members = ["yield"]
+members = ["contracts", "yield", ...]  # include contracts
 
 [workspace.package]
 version = "0.0.0"

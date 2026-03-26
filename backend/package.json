@@ -10,11 +10,12 @@
     "start": "node dist/index.js",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "lint": "eslint 'src/**/*.ts'",
-    "lint:fix": "eslint 'src/**/*.ts' --fix"
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
+    "@stellar/stellar-sdk": "^14.6.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",

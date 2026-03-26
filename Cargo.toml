@@ -1,9 +1,5 @@
 [workspace]
-<<<<<<< HEAD
 members = [".", "src/vesting", "src/upgradeable"]
-=======
-members = [".", "src/vesting"]
->>>>>>> 7f5c689 (Fix merge conflict)
 resolver = "2"
 
 [package]
@@ -17,3 +13,4 @@ path = "src/vesting/lib.rs"
 [[test]]
 name = "vesting"
 path = "src/vesting/lib.rs"
+

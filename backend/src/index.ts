@@ -1,6 +1,7 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { errorHandler } from './api/middleware/error.middleware';
 import logger from './utils/logger';
 import transactionsRouter from './api/routes/transactions.route';
 import sep24Router from './api/routes/sep24.route';
@@ -23,6 +24,8 @@ app.get('/', (req: Request, res: Response) => {
   res.send('AnchorPoint Backend API is running.');
 });
 
+// Global error handling middleware (must be last)
+app.use(errorHandler);
 // SEP-24 routes
 app.use('/sep24', sep24Router);
 

@@ -1,15 +1,16 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import { errorHandler } from './api/middleware/error.middleware';
+import { config } from './config/env';
 import logger from './utils/logger';
 import transactionsRouter from './api/routes/transactions.route';
 import sep24Router from './api/routes/sep24.route';
+import dotenv from 'dotenv';
+import { errorHandler } from './api/middleware/error.middleware';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3002;
+const PORT = config.PORT;
 
 app.use(cors());
 app.use(express.json());

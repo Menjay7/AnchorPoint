@@ -1,4 +1,5 @@
+warning: /Users/ijayabby/Documents/workspace/Drips wave 3/AnchorPoint/Cargo.toml: file `/Users/ijayabby/Documents/workspace/Drips wave 3/AnchorPoint/src/vesting/lib.rs` found to be present in multiple build targets:
+  * `lib` target `anchorpoint`
+  * `integration-test` target `vesting`
     Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-    Blocking waiting for file lock on package cache
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.16s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.12s

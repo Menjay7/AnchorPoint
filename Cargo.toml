@@ -1,9 +1,5 @@
 [workspace]
-<<<<<<< HEAD
 members = [".", "src/vesting", "src/upgradeable"]
-=======
-members = [".", "src/vesting"]
->>>>>>> 7f5c689 (Fix merge conflict)
 resolver = "2"
 
 [package]

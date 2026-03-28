@@ -1,134 +1,163 @@
-import { Keypair, Networks, WebAuth, TransactionBuilder } from '@stellar/stellar-sdk';
-import { AuthService } from './auth.service';
+import jwt from 'jsonwebtoken';
+import { RedisService } from './redis.service';
 
-describe('AuthService', () => {
-  const anchorKeypair = Keypair.random();
-  const clientKeypair = Keypair.random();
-  const network = Networks.TESTNET;
-  const homeDomain = 'test.anchor.com';
+jest.mock('jsonwebtoken', () => ({
+  sign: jest.fn(),
+  verify: jest.fn()
+}));
 
-  describe('generateChallenge', () => {
-    it('should generate a valid SEP-10 challenge transaction', () => {
-      const challengeXdr = AuthService.generateChallengeTx(
-        anchorKeypair,
-        clientKeypair.publicKey(),
-        homeDomain,
-        network
-      );
+jest.mock('crypto', () => ({
+  randomBytes: jest.fn()
+}));
 
-      expect(challengeXdr).toBeDefined();
-      expect(typeof challengeXdr).toBe('string');
+const loadAuthService = () => {
+  jest.resetModules();
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const jwtMock = require('jsonwebtoken') as typeof jwt;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const cryptoMock = require('crypto');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const mod = require('./auth.service') as typeof import('./auth.service');
+  return { ...mod, jwtMock, cryptoMock };
+};
 
-      // Verify the generated challenge
-      const { clientAccountID } = WebAuth.readChallengeTx(
-        challengeXdr,
-        anchorKeypair.publicKey(),
-        network,
-        [homeDomain],
-        homeDomain
-      );
-
-      expect(clientAccountID).toBe(clientKeypair.publicKey());
-    });
+describe('Auth Service', () => {
+  afterEach(() => {
+    delete process.env.JWT_SECRET;
+    jest.clearAllMocks();
   });
 
-  describe('verifyChallenge', () => {
-    it('should verify a correctly signed challenge', () => {
-      const challengeXdr = AuthService.generateChallengeTx(
-        anchorKeypair,
-        clientKeypair.publicKey(),
-        homeDomain,
-        network
-      );
+  it('extractBearerToken returns null when header is missing', () => {
+    const { extractBearerToken } = loadAuthService();
+    expect(extractBearerToken(undefined)).toBeNull();
+  });
 
-      // In SEP-10, the client signs the challenge transaction
-      const transaction = TransactionBuilder.fromXDR(challengeXdr, network);
-      transaction.sign(clientKeypair);
-      const clientSignedTx = transaction.toEnvelope().toXDR('base64');
+  it('extractBearerToken returns null for non-bearer authorization', () => {
+    const { extractBearerToken } = loadAuthService();
+    expect(extractBearerToken('Basic abc')).toBeNull();
+  });
 
-      const verifiedClientAccount = AuthService.verifyChallenge(
-        clientSignedTx,
-        anchorKeypair.publicKey(),
-        network,
-        homeDomain
-      );
+  it('extractBearerToken extracts token from Bearer header', () => {
+    const { extractBearerToken } = loadAuthService();
+    expect(extractBearerToken('Bearer tok_123')).toBe('tok_123');
+  });
 
-      expect(verifiedClientAccount).toBe(clientKeypair.publicKey());
+  it('extractBearerToken returns null when Bearer token is empty', () => {
+    const { extractBearerToken } = loadAuthService();
+    expect(extractBearerToken('Bearer ')).toBeNull();
+  });
+
+  it('signToken signs with {sub: publicKey} and the configured secret', () => {
+    process.env.JWT_SECRET = 'test-secret';
+    const { signToken, jwtMock } = loadAuthService();
+    (jwtMock.sign as jest.Mock).mockReturnValue('signed-token');
+    const token = signToken('GBAD_PUBLIC_KEY');
+
+    expect(token).toBe('signed-token');
+    expect(jwtMock.sign).toHaveBeenCalledWith({ sub: 'GBAD_PUBLIC_KEY' }, 'test-secret');
+  });
+
+  it('verifyToken returns the `sub` claim when valid', () => {
+    process.env.JWT_SECRET = 'test-secret';
+    const { verifyToken, jwtMock } = loadAuthService();
+    (jwtMock.verify as jest.Mock).mockReturnValue({ sub: 'GVALID_PUBLIC_KEY' });
+    const decoded = verifyToken('tok_123');
+
+    expect(decoded).toEqual({ sub: 'GVALID_PUBLIC_KEY' });
+    expect(jwtMock.verify).toHaveBeenCalledWith('tok_123', 'test-secret');
+  });
+
+  it('verifyToken throws when payload has no sub', () => {
+    process.env.JWT_SECRET = 'test-secret';
+    const { verifyToken, jwtMock } = loadAuthService();
+    (jwtMock.verify as jest.Mock).mockReturnValue({});
+    expect(() => verifyToken('tok_123')).toThrow('Invalid token payload');
+  });
+
+  describe('Challenge Management', () => {
+    let mockRedisService: Partial<RedisService>;
+
+    beforeEach(() => {
+      mockRedisService = {
+        getJSON: jest.fn(),
+        setJSON: jest.fn(),
+        del: jest.fn()
+      };
     });
 
-    it('should throw an error if the client signature is missing', () => {
-      const challengeXdr = AuthService.generateChallengeTx(
-        anchorKeypair,
-        clientKeypair.publicKey(),
-        homeDomain,
-        network
-      );
+    it('generateChallenge returns base64 encoded random bytes', () => {
+      const { generateChallenge, cryptoMock } = loadAuthService();
+      const mockBuffer = Buffer.from('random-bytes');
+      cryptoMock.randomBytes.mockReturnValue(mockBuffer);
 
-      // Note: challengeXdr is already signed by the anchor (server) inside AuthService.generateChallengeTx
+      const challenge = generateChallenge();
+
+      expect(challenge).toBe(mockBuffer.toString('base64'));
+      expect(cryptoMock.randomBytes).toHaveBeenCalledWith(32);
+    });
+
+    it('storeChallenge stores challenge data in Redis with TTL', async () => {
+      const { storeChallenge } = loadAuthService();
+      const publicKey = 'GBAD_PUBLIC_KEY';
+      const challenge = 'test-challenge';
+      const mockTimestamp = 1640995200000;
       
-      expect(() => {
-        AuthService.verifyChallenge(
-          challengeXdr,
-          anchorKeypair.publicKey(),
-          network,
-          homeDomain
-        );
-      }).toThrow('Challenge verification failed');
-    });
+      jest.spyOn(Date, 'now').mockReturnValue(mockTimestamp);
 
-    it('should throw an error if the signature is from a wrong account', () => {
-      const challengeXdr = AuthService.generateChallengeTx(
-        anchorKeypair,
-        clientKeypair.publicKey(),
-        homeDomain,
-        network
+      await storeChallenge(mockRedisService as RedisService, publicKey, challenge);
+
+      expect(mockRedisService.setJSON).toHaveBeenCalledWith(
+        'sep10:challenge:GBAD_PUBLIC_KEY',
+        {
+          challenge: 'test-challenge',
+          publicKey: 'GBAD_PUBLIC_KEY',
+          createdAt: mockTimestamp
+        },
+        300 // 5 minutes TTL
       );
 
-      const wrongKeypair = Keypair.random();
-      const transaction = TransactionBuilder.fromXDR(challengeXdr, network);
-      transaction.sign(wrongKeypair);
-      const wrongSignedTx = transaction.toEnvelope().toXDR('base64');
-
-      expect(() => {
-        AuthService.verifyChallenge(
-          wrongSignedTx,
-          anchorKeypair.publicKey(),
-          network,
-          homeDomain
-        );
-      }).toThrow('Challenge verification failed');
+      jest.restoreAllMocks();
     });
 
-    it('should throw error if readChallengeTx fails (invalid network/domain)', () => {
-      const challengeXdr = AuthService.generateChallengeTx(
-        anchorKeypair,
-        clientKeypair.publicKey(),
-        homeDomain,
-        network
-      );
+    it('getChallenge retrieves challenge data from Redis', async () => {
+      const { getChallenge } = loadAuthService();
+      const publicKey = 'GBAD_PUBLIC_KEY';
+      const expectedChallenge = {
+        challenge: 'test-challenge',
+        publicKey: 'GBAD_PUBLIC_KEY',
+        createdAt: 1640995200000
+      };
 
-      expect(() => {
-        AuthService.verifyChallenge(
-          challengeXdr,
-          anchorKeypair.publicKey(),
-          Networks.PUBLIC, // Wrong network
-          homeDomain
-        );
-      }).toThrow();
+      (mockRedisService.getJSON as jest.Mock).mockResolvedValue(expectedChallenge);
+
+      const result = await getChallenge(mockRedisService as RedisService, publicKey);
+
+      expect(result).toEqual(expectedChallenge);
+      expect(mockRedisService.getJSON).toHaveBeenCalledWith('sep10:challenge:GBAD_PUBLIC_KEY');
     });
-  });
 
-  describe('AuthService instance methods', () => {
-    it('should generate a challenge using instance method', () => {
-      const authService = new AuthService();
-      const challengeXdr = authService.generateChallenge(
-        clientKeypair.publicKey(),
-        anchorKeypair,
-        homeDomain,
-        network
-      );
+    it('getChallenge returns null when challenge not found', async () => {
+      const { getChallenge } = loadAuthService();
+      const publicKey = 'GBAD_PUBLIC_KEY';
 
-      expect(challengeXdr).toBeDefined();
+      (mockRedisService.getJSON as jest.Mock).mockResolvedValue(null);
+
+      const result = await getChallenge(mockRedisService as RedisService, publicKey);
+
+      expect(result).toBeNull();
+      expect(mockRedisService.getJSON).toHaveBeenCalledWith('sep10:challenge:GBAD_PUBLIC_KEY');
+    });
+
+    it('removeChallenge deletes challenge from Redis', async () => {
+      const { removeChallenge } = loadAuthService();
+      const publicKey = 'GBAD_PUBLIC_KEY';
+
+      (mockRedisService.del as jest.Mock).mockResolvedValue(1);
+
+      await removeChallenge(mockRedisService as RedisService, publicKey);
+
+      expect(mockRedisService.del).toHaveBeenCalledWith('sep10:challenge:GBAD_PUBLIC_KEY');
     });
   });
 });
+

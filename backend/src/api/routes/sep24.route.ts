@@ -29,9 +29,31 @@ interface DepositResponse {
 }
 
 /**
- * POST /transactions/deposit/interactive
- * SEP-24 Interactive Deposit Endpoint
- * Returns a URL for the user to complete KYC/Deposit
+ * @swagger
+ * /sep24/transactions/deposit/interactive:
+ *   post:
+ *     summary: Interactive Deposit
+ *     description: SEP-24 Interactive Deposit Endpoint. Returns a URL for the user to complete KYC/Deposit.
+ *     tags: [SEP-24]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/DepositRequest'
+ *     responses:
+ *       200:
+ *         description: Interactive deposit URL generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/InteractiveResponse'
+ *       400:
+ *         description: Invalid request parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/transactions/deposit/interactive', (req: Request, res: Response) => {
   const { asset_code, account, amount, lang = 'en' }: DepositRequest = req.body;
@@ -73,9 +95,31 @@ router.post('/transactions/deposit/interactive', (req: Request, res: Response) =
 });
 
 /**
- * POST /transactions/withdraw/interactive
- * SEP-24 Interactive Withdraw Endpoint
- * Returns a URL for the user to complete KYC/Withdraw
+ * @swagger
+ * /sep24/transactions/withdraw/interactive:
+ *   post:
+ *     summary: Interactive Withdrawal
+ *     description: SEP-24 Interactive Withdraw Endpoint. Returns a URL for the user to complete KYC/Withdraw.
+ *     tags: [SEP-24]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/WithdrawRequest'
+ *     responses:
+ *       200:
+ *         description: Interactive withdrawal URL generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/InteractiveResponse'
+ *       400:
+ *         description: Invalid request parameters
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
 router.post('/transactions/withdraw/interactive', (req: Request, res: Response) => {
   const { asset_code, account, amount, lang = 'en' }: DepositRequest = req.body;

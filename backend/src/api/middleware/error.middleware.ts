@@ -22,10 +22,12 @@ export class AppError extends Error {
  */
 export const errorHandler = (
   err: Error | AppError,
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ) => {
+  void next;
+
   // Handle AppError instances
   if (err instanceof AppError) {
     return res.status(err.statusCode).json({
@@ -36,10 +38,16 @@ export const errorHandler = (
 
   // Handle Zod validation errors (already handled in validate middleware, but as fallback)
   if (err.name === 'ZodError') {
+    const zodError = err as Error & {
+      issues?: Array<{
+        path: Array<string | number>;
+        message: string;
+      }>;
+    };
     return res.status(400).json({
       status: 'error',
       message: 'Validation failed',
-      details: (err as any).issues?.map((issue: any) => ({
+      details: zodError.issues?.map((issue) => ({
         path: issue.path,
         message: issue.message
       }))
@@ -63,7 +71,7 @@ export const errorHandler = (
 
   // Handle Prisma errors
   if (err.name === 'PrismaClientKnownRequestError') {
-    const prismaError = err as any;
+    const prismaError = err as Error & { code?: string };
     if (prismaError.code === 'P2002') {
       return res.status(409).json({
         status: 'error',
@@ -92,7 +100,9 @@ export const errorHandler = (
  * Async handler wrapper to catch async errors and forward them to the error handler
  * @param fn - An async Express route handler
  */
-export const asyncHandler = (fn: Function) => {
+export const asyncHandler = (
+  fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>
+) => {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };

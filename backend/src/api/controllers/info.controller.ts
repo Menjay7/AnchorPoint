@@ -59,6 +59,14 @@ export interface StellarInfo {
   };
 }
 
+type FeeVariation = {
+  min_amount: string;
+  max_amount: string;
+  fee_fixed: number;
+  fee_percent: number;
+  fee_minimum: number;
+};
+
 export const getInfo = (req: Request, res: Response): Response => {
   const format = req.query.format as string;
   const acceptHeader = req.headers.accept || '';
@@ -107,7 +115,7 @@ export const getInfo = (req: Request, res: Response): Response => {
 
   // Filter out undefined values
   const filteredInfo = Object.fromEntries(
-    Object.entries(stellarInfo).filter(([_, value]) => value !== undefined)
+    Object.entries(stellarInfo).filter(([, value]) => value !== undefined)
   ) as StellarInfo;
 
   if (isToml) {
@@ -202,7 +210,7 @@ function getFeeMinimum(asset: string): number {
 }
 
 function getDepositFeeVariations() {
-  const variations: { [key: string]: any } = {};
+  const variations: Record<string, FeeVariation> = {};
   SUPPORTED_ASSETS.forEach(asset => {
     variations[asset] = {
       min_amount: getMinAmount(asset),
@@ -216,7 +224,7 @@ function getDepositFeeVariations() {
 }
 
 function getWithdrawFeeVariations() {
-  const variations: { [key: string]: any } = {};
+  const variations: Record<string, FeeVariation> = {};
   SUPPORTED_ASSETS.forEach(asset => {
     variations[asset] = {
       min_amount: getMinAmount(asset),
@@ -283,7 +291,7 @@ function convertToTOML(info: StellarInfo): string {
       lines.push('[fee_variations.deposit]');
       Object.entries(info.fee_variations.deposit).forEach(([assetCode, fees]) => {
         lines.push(`[fee_variations.deposit.${assetCode}]`);
-        Object.entries(fees as any).forEach(([key, value]) => {
+        Object.entries(fees).forEach(([key, value]) => {
           if (typeof value === 'string') {
             lines.push(`${key} = "${value}"`);
           } else {
@@ -298,7 +306,7 @@ function convertToTOML(info: StellarInfo): string {
       lines.push('[fee_variations.withdraw]');
       Object.entries(info.fee_variations.withdraw).forEach(([assetCode, fees]) => {
         lines.push(`[fee_variations.withdraw.${assetCode}]`);
-        Object.entries(fees as any).forEach(([key, value]) => {
+        Object.entries(fees).forEach(([key, value]) => {
           if (typeof value === 'string') {
             lines.push(`${key} = "${value}"`);
           } else {

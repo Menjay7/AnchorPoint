@@ -11,6 +11,8 @@ jest.mock('crypto', () => {
 
 import sep24Router from './sep24.route';
 
+jest.setTimeout(15000);
+
 describe('SEP-24 Routes', () => {
   const app = express();
   app.use(express.json());

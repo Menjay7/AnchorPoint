@@ -7,10 +7,10 @@ const router = Router();
 // Mock Redis client for demonstration
 // In a real implementation, you would inject the actual Redis client
 const mockRedisClient = {
-  get: async (key: string) => null,
-  set: async (key: string, value: string) => {},
-  del: async (key: string) => 1,
-  expire: async (key: string, seconds: number) => {}
+  get: async () => null,
+  set: async () => {},
+  del: async () => 1,
+  expire: async () => {}
 };
 
 const redisService = new RedisService(mockRedisClient);

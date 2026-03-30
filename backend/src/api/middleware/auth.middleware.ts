@@ -1,9 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import { config } from '../../config/env';
-
-const JWT_SECRET = config.JWT_SECRET;
 import { extractBearerToken, verifyToken } from '../../services/auth.service';
+
+void config.JWT_SECRET;
 
 export interface AuthRequest extends Request {
   user?: {

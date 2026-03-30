@@ -30,7 +30,7 @@ describe('Transactions Router', () => {
   });
 
   it('should return transactions with pagination', async () => {
-    const mockData = [{ id: '1', userPublicKey: mockPublicKey, amount: '100' }];
+    const mockData = [{ id: '1', amount: '100', user: { publicKey: mockPublicKey } }];
     (prisma.transaction.findMany as jest.Mock).mockResolvedValue(mockData);
     (prisma.transaction.count as jest.Mock).mockResolvedValue(1);
 
@@ -56,7 +56,10 @@ describe('Transactions Router', () => {
 
     expect(res.statusCode).toEqual(200);
     expect(prisma.transaction.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ assetCode: 'USDC' })
+      where: expect.objectContaining({
+        assetCode: 'USDC',
+        user: { publicKey: mockPublicKey },
+      })
     }));
   });
 

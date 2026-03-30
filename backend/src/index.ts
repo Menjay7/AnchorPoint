@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { config } from './config/env';
 import logger from './utils/logger';
@@ -21,11 +21,11 @@ app.use('/info', infoRouter);
 // SEP-24 routes
 app.use('/sep24', sep24Router);
 
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'UP', timestamp: new Date().toISOString() });
 });
 
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
   res.send('AnchorPoint Backend API is running.');
 });
 

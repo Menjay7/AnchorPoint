@@ -2,7 +2,7 @@
 name = "anchorpoint-utils"
 version = "0.1.0"
 edition = "2021"
-description = "Shared utilities: standardized event emitter for Soroban contracts"
+description = "Shared utilities: standardized event emitter and C2C call wrapper for Soroban contracts"
 
 [dependencies]
 soroban-sdk = "22.0.0"

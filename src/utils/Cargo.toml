@@ -2,14 +2,14 @@
 name = "anchorpoint-utils"
 version = "0.1.0"
 edition = "2021"
-description = "Shared utilities: standardized event emitter for Soroban contracts"
+description = "Shared utilities for AnchorPoint: events and dynamic fee calculation"
 
 [dependencies]
 soroban-sdk = "22.0.0"
 
 [lib]
 name = "anchorpoint_utils"
-path = "events.rs"
+path = "lib.rs"
 crate-type = ["rlib"]
 doctest = false
 

@@ -11,6 +11,7 @@ members = [
     "src/utils",
     "src/flash_loan",
     "src/kyc"
+    "src/staking"
 ]
 resolver = "2"
 

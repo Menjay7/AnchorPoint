@@ -7,3 +7,11 @@ Merging PR #90: feat: sep6 multi asset
 Conflict merging PR #90, resolving by accepting both...
 Resolving conflict in backend/src/api/routes/sep24.route.ts
 Resolving conflict in backend/src/index.ts
+Successfully resolved and merged PR #90
+Merging PR #89: feat: add swagger/openapi documentation
+Conflict merging PR #89, resolving by accepting both...
+Resolving conflict in backend/package.json
+Resolving conflict in backend/src/api/routes/info.route.ts
+Resolving conflict in backend/src/api/routes/sep24.route.ts
+Resolving conflict in backend/src/api/routes/transactions.route.ts
+Resolving conflict in backend/src/index.ts

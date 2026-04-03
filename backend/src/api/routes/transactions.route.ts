@@ -18,6 +18,7 @@ const querySchema = z.object({
  *   get:
  *     summary: Get transaction history
  *     description: Fetches transaction history for the authenticated user with pagination support
+ *     description: Fetches transaction history for the authenticated user with pagination support.
  *     tags: [Transactions]
  *     security:
  *       - bearerAuth: []
@@ -42,6 +43,7 @@ const querySchema = z.object({
  *         schema:
  *           type: string
  *         description: Filter transactions by asset code (e.g., USD, EUR)
+ *         description: Filter by asset code (e.g., USDC, BTC)
  *     responses:
  *       200:
  *         description: Transaction history retrieved successfully
@@ -64,6 +66,7 @@ const querySchema = z.object({
  *                       $ref: '#/components/schemas/Pagination'
  *       401:
  *         description: Unauthorized - Missing or invalid authentication token
+ *         description: Unauthorized - Invalid or missing authentication token
  *         content:
  *           application/json:
  *             schema:

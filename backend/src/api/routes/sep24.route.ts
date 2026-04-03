@@ -29,6 +29,8 @@ interface DepositResponse {
  *   post:
  *     summary: SEP-24 Interactive Deposit
  *     description: Returns a URL for the user to complete KYC and deposit flow
+ *     summary: Interactive Deposit
+ *     description: SEP-24 Interactive Deposit Endpoint. Returns a URL for the user to complete KYC/Deposit.
  *     tags: [SEP-24]
  *     requestBody:
  *       required: true
@@ -72,6 +74,16 @@ interface DepositResponse {
  *                   description: Unique transaction identifier
  *       400:
  *         description: Invalid request - missing or unsupported asset_code
+ *             $ref: '#/components/schemas/DepositRequest'
+ *     responses:
+ *       200:
+ *         description: Interactive deposit URL generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/InteractiveResponse'
+ *       400:
+ *         description: Invalid request parameters
  *         content:
  *           application/json:
  *             schema:
@@ -122,6 +134,8 @@ router.post('/transactions/deposit/interactive', (req: Request, res: Response) =
  *   post:
  *     summary: SEP-24 Interactive Withdraw
  *     description: Returns a URL for the user to complete KYC and withdrawal flow
+ *     summary: Interactive Withdrawal
+ *     description: SEP-24 Interactive Withdraw Endpoint. Returns a URL for the user to complete KYC/Withdraw.
  *     tags: [SEP-24]
  *     requestBody:
  *       required: true
@@ -165,6 +179,16 @@ router.post('/transactions/deposit/interactive', (req: Request, res: Response) =
  *                   description: Unique transaction identifier
  *       400:
  *         description: Invalid request - missing or unsupported asset_code
+ *             $ref: '#/components/schemas/WithdrawRequest'
+ *     responses:
+ *       200:
+ *         description: Interactive withdrawal URL generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/InteractiveResponse'
+ *       400:
+ *         description: Invalid request parameters
  *         content:
  *           application/json:
  *             schema:

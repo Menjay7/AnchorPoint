@@ -1,14 +1,16 @@
-export const SUPPORTED_ASSETS = ['USDC', 'USD', 'BTC', 'ETH'] as const;
+import { SUPPORTED_ASSET_CODES, getAsset, isDepositSupported, isWithdrawSupported } from '../config/assets';
 
-export type SupportedAsset = (typeof SUPPORTED_ASSETS)[number];
+// Re-export for backward compatibility
+export { SUPPORTED_ASSET_CODES as SUPPORTED_ASSETS };
+export { getAsset, isDepositSupported, isWithdrawSupported };
 
-export const normalizeAssetCode = (assetCode: string): string => {
-  return assetCode.trim().toUpperCase();
-};
+export type SupportedAsset = string;
 
-export const isSupportedAsset = (assetCode: string): assetCode is SupportedAsset => {
-  return (SUPPORTED_ASSETS as readonly string[]).includes(normalizeAssetCode(assetCode));
-};
+export const normalizeAssetCode = (assetCode: string): string =>
+  assetCode.trim().toUpperCase();
+
+export const isSupportedAsset = (assetCode: string): boolean =>
+  getAsset(assetCode) !== undefined;
 
 interface InteractiveUrlParams {
   baseUrl: string;
@@ -45,9 +47,8 @@ export const createDepositInteractiveUrl = (params: {
   account?: string;
   amount?: string;
   lang?: string;
-}): string => {
-  return buildInteractiveUrl({ ...params, path: '/kyc-deposit', assetCode: normalizeAssetCode(params.assetCode) });
-};
+}): string =>
+  buildInteractiveUrl({ ...params, path: '/kyc-deposit', assetCode: normalizeAssetCode(params.assetCode) });
 
 export const createWithdrawInteractiveUrl = (params: {
   baseUrl: string;
@@ -56,7 +57,5 @@ export const createWithdrawInteractiveUrl = (params: {
   account?: string;
   amount?: string;
   lang?: string;
-}): string => {
-  return buildInteractiveUrl({ ...params, path: '/kyc-withdraw', assetCode: normalizeAssetCode(params.assetCode) });
-};
-
+}): string =>
+  buildInteractiveUrl({ ...params, path: '/kyc-withdraw', assetCode: normalizeAssetCode(params.assetCode) });

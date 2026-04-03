@@ -1,18 +1,14 @@
 import { Router, Request, Response } from 'express';
 import { randomUUID } from 'crypto';
-import { config } from '../../config/env';
-import { depositInteractive, withdrawInteractive } from '../controllers/sep24.controller';
 import {
-  createDepositInteractiveUrl,
   createWithdrawInteractiveUrl,
   isSupportedAsset,
   normalizeAssetCode
+  normalizeAssetCode,
+  SUPPORTED_ASSETS,
 } from '../../services/kyc.service';
 
 const router = Router();
-
-// Supported assets for deposit
-const SUPPORTED_ASSETS = ['USDC', 'USD', 'BTC', 'ETH'];
 
 interface DepositRequest {
   asset_code: string;

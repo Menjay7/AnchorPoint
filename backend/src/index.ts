@@ -6,6 +6,7 @@ import { swaggerSpec } from './config/swagger';
 import logger from './utils/logger';
 import transactionsRouter from './api/routes/transactions.route';
 import sep24Router from './api/routes/sep24.route';
+import sep6Router from './api/routes/sep6.route';
 import infoRouter from './api/routes/info.route';
 import { errorHandler } from './api/middleware/error.middleware';
 
@@ -75,6 +76,17 @@ app.use('/info', infoRouter);
 
 // SEP-24 routes
 app.use('/sep24', sep24Router);
+
+// SEP-6 routes
+app.use('/sep6', sep6Router);
+
+app.get('/health', (req: Request, res: Response) => {
+  res.json({ status: 'UP', timestamp: new Date().toISOString() });
+});
+
+app.get('/', (req: Request, res: Response) => {
+  res.send('AnchorPoint Backend API is running.');
+});
 
 // Global error handling middleware (must be last)
 app.use(errorHandler);

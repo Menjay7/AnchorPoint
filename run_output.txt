@@ -1,0 +1,9 @@
+Fetching open PRs...
+Found 13 open PRs.
+Already on 'main'
+Merging PR #91: feat: add swagger/openapi documentation
+Merged PR #91 successfully without conflicts.
+Merging PR #90: feat: sep6 multi asset
+Conflict merging PR #90, resolving by accepting both...
+Resolving conflict in backend/src/api/routes/sep24.route.ts
+Resolving conflict in backend/src/index.ts

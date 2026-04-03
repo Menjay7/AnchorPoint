@@ -32,3 +32,11 @@ Merging PR #80: feat: add snapshot logic for rewards
 Conflict merging PR #80, resolving by accepting both...
 Resolving conflict in Cargo.toml
 Resolving conflict in src/staking/Cargo.toml
+Successfully resolved and merged PR #80
+Merging PR #79: feat: implement multi-asset swap contract
+Merged PR #79 successfully without conflicts.
+Merging PR #78: feat: implement time-locked escrow with refund
+From https://github.com/ceejaylaboratory/AnchorPoint
+ * [new ref]         refs/pull/78/head -> pr-78
+Conflict merging PR #78, resolving by accepting both...
+Resolving conflict in Cargo.toml

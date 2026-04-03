@@ -23,6 +23,7 @@ members = [
   "src/utils",
   "src/flash_loan",
   "src/staking",
+  "src/escrow_timelock",
 ]
 resolver = "2"
 

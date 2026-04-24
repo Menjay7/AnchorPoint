@@ -10,6 +10,7 @@ import sep6Router from './api/routes/sep6.route';
 import sep38Router from './api/routes/sep38.route';
 import infoRouter from './api/routes/info.route';
 import metricsRouter from './api/routes/metrics.route';
+import multisigRouter from './api/routes/multisig.route';
 import { errorHandler } from './api/middleware/error.middleware';
 import { metricsMiddleware, connectionTracker } from './api/middleware/metrics.middleware';
 
@@ -98,6 +99,9 @@ app.use(connectionTracker);
 app.use(metricsMiddleware);
 
 app.use('/api/transactions', transactionsRouter);
+
+// Multisig transaction coordination
+app.use('/api/multisig', multisigRouter);
 
 // Prometheus metrics endpoint
 app.use('/metrics', metricsRouter);

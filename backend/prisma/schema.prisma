@@ -58,3 +58,65 @@ model KycCustomer {
 
   @@index([userId])
 }
+
+enum MultisigStatus {
+  PENDING
+  PARTIALLY_SIGNED
+  READY
+  SUBMITTED
+  FAILED
+  EXPIRED
+}
+
+model MultisigTransaction {
+  id                String              @id @default(uuid())
+  envelopeXdr       String              // Base64 encoded transaction envelope
+  hash              String              @unique // Transaction hash
+  creatorPublicKey  String              // Who created the transaction
+  requiredSigners   Json                // Array of required signer public keys
+  threshold         Int                 // Number of signatures required
+  currentSignatures Int                 @default(0)
+  status            MultisigStatus      @default(PENDING)
+  memo              String?
+  expiresAt         DateTime?
+  submittedAt       DateTime?
+  stellarTxId       String?             @unique
+  metadata          Json?               // Additional metadata
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  signatures        MultisigSignature[]
+  notifications     MultisigNotification[]
+
+  @@index([hash])
+  @@index([creatorPublicKey])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+model MultisigSignature {
+  id                    String              @id @default(uuid())
+  multisigTransactionId String
+  multisigTransaction   MultisigTransaction @relation(fields: [multisigTransactionId], references: [id], onDelete: Cascade)
+  signerPublicKey       String
+  signature             String              // Base64 encoded signature
+  signedAt              DateTime            @default(now())
+
+  @@unique([multisigTransactionId, signerPublicKey])
+  @@index([multisigTransactionId])
+  @@index([signerPublicKey])
+}
+
+model MultisigNotification {
+  id                    String              @id @default(uuid())
+  multisigTransactionId String
+  multisigTransaction   MultisigTransaction @relation(fields: [multisigTransactionId], references: [id], onDelete: Cascade)
+  recipientPublicKey    String
+  type                  String              // SIGNATURE_REQUIRED, SIGNATURE_ADDED, THRESHOLD_REACHED, SUBMITTED, FAILED
+  message               String
+  sentAt                DateTime            @default(now())
+  readAt                DateTime?
+
+  @@index([multisigTransactionId])
+  @@index([recipientPublicKey])
+  @@index([readAt])
+}

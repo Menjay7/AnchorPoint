@@ -5,6 +5,28 @@ use soroban_sdk::{
 };
 
 #[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct InitializedEvent {
+    pub token_a: Address,
+    pub token_b: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct DepositEvent {
+    pub amount_a: i128,
+    pub amount_b: i128,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct SwapEvent {
+    pub token_in: Address,
+    pub amount_in: i128,
+    pub amount_out: i128,
+}
+
+#[contracttype]
 #[derive(Clone)]
 pub enum DataKey {
     TokenA,
@@ -28,6 +50,10 @@ impl MultiAssetSwap {
         env.storage().instance().set(&DataKey::TokenB, &token_b);
         env.storage().instance().set(&DataKey::ReserveA, &0_i128);
         env.storage().instance().set(&DataKey::ReserveB, &0_i128);
+        env.events().publish(
+            (symbol_short!("Swap"), symbol_short!("Init"), symbol_short!("v1"), ()),
+            InitializedEvent { token_a, token_b },
+        );
     }
 
     /// Deposits liquidity into the pool.
@@ -49,7 +75,10 @@ impl MultiAssetSwap {
         env.storage().instance().set(&DataKey::ReserveA, &(reserve_a + amount_a));
         env.storage().instance().set(&DataKey::ReserveB, &(reserve_b + amount_b));
 
-        env.events().publish((symbol_short!("deposit"), from), (amount_a, amount_b));
+        env.events().publish(
+            (symbol_short!("Swap"), symbol_short!("Deposit"), symbol_short!("v1"), from),
+            DepositEvent { amount_a, amount_b },
+        );
     }
 
     /// Swaps tokens using the constant product formula (with a 0.3% fee).
@@ -117,7 +146,10 @@ impl MultiAssetSwap {
         // Transfer token_out to user
         token::Client::new(&env, &token_out).transfer(&contract_addr, &from, &amount_out);
 
-        env.events().publish((symbol_short!("swap"), from), (amount_in, amount_out));
+        env.events().publish(
+            (symbol_short!("Swap"), symbol_short!("Swapped"), symbol_short!("v1"), from),
+            SwapEvent { token_in, amount_in, amount_out },
+        );
 
         amount_out
     }

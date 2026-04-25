@@ -20,6 +20,40 @@ use soroban_sdk::{
 // Fixed-point precision: 1e18
 const PRECISION: i128 = 1_000_000_000_000_000_000;
 
+// ── Events ───────────────────────────────────────────────────────────────────
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct InitializedEvent {
+    pub admin: Address,
+    pub stake_token: Address,
+    pub reward_token: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct DepositRewardsEvent {
+    pub amount: i128,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct StakedEvent {
+    pub amount: i128,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct UnstakedEvent {
+    pub amount: i128,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct ClaimedEvent {
+    pub amount: i128,
+}
+
 // ── Storage keys ─────────────────────────────────────────────────────────────
 
 #[contracttype]
@@ -62,6 +96,10 @@ impl YieldDistribution {
         env.storage().instance().set(&DataKey::RewardToken, &reward_token);
         env.storage().instance().set(&DataKey::TotalStaked, &0_i128);
         env.storage().instance().set(&DataKey::RewardPerTokenStored, &0_i128);
+        env.events().publish(
+            (symbol_short!("Yield"), symbol_short!("Init"), symbol_short!("v1"), ()),
+            InitializedEvent { admin, stake_token, reward_token },
+        );
     }
 
     /// Deposit `amount` of reward tokens into the contract for distribution.
@@ -103,8 +141,8 @@ impl YieldDistribution {
         }
 
         env.events().publish(
-            (symbol_short!("dep_rwd"), from),
-            amount,
+            (symbol_short!("Yield"), symbol_short!("DepRwd"), symbol_short!("v1"), from),
+            DepositRewardsEvent { amount },
         );
     }
 
@@ -139,7 +177,10 @@ impl YieldDistribution {
             .instance()
             .set(&DataKey::TotalStaked, &(total + amount));
 
-        env.events().publish((symbol_short!("staked"), user), amount);
+        env.events().publish(
+            (symbol_short!("Yield"), symbol_short!("Staked"), symbol_short!("v1"), user),
+            StakedEvent { amount },
+        );
     }
 
     /// Unstake `amount` of the staking token.
@@ -172,7 +213,10 @@ impl YieldDistribution {
             &amount,
         );
 
-        env.events().publish((symbol_short!("unstaked"), user), amount);
+        env.events().publish(
+            (symbol_short!("Yield"), symbol_short!("Unstaked"), symbol_short!("v1"), user),
+            UnstakedEvent { amount },
+        );
     }
 
     // ── Claiming ──────────────────────────────────────────────────────────
@@ -201,8 +245,10 @@ impl YieldDistribution {
                 &reward,
             );
 
-            env.events()
-                .publish((symbol_short!("claimed"), user), reward);
+            env.events().publish(
+                (symbol_short!("Yield"), symbol_short!("Claimed"), symbol_short!("v1"), user),
+                ClaimedEvent { amount: reward },
+            );
         }
 
         reward

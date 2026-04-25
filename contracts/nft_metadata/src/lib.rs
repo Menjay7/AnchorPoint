@@ -113,17 +113,67 @@ pub struct CollectionMetadata {
 
 /// Event types for NFT operations
 #[contracttype]
-pub enum NftEvent {
-    /// Emitted when an NFT is minted
-    Minted { token_id: u64, to: Address },
-    /// Emitted when an NFT is transferred
-    Transferred { token_id: u64, from: Address, to: Address },
-    /// Emitted when metadata is updated
-    MetadataUpdated { token_id: u64 },
-    /// Emitted when approval is granted
-    Approved { token_id: u64, owner: Address, approved: Address },
-    /// Emitted when operator approval is set
-    OperatorApprovalSet { owner: Address, operator: Address, approved: bool },
+#[derive(Clone, Debug, PartialEq)]
+pub struct InitializedEvent {
+    pub admin: Address,
+    pub collection: CollectionMetadata,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct MintedEvent {
+    pub to: Address,
+    pub metadata: NftMetadata,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct TransferredEvent {
+    pub from: Address,
+    pub to: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct MetadataUpdatedEvent {
+    pub name: String,
+    pub description: String,
+    pub image: String,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct AttributeAddedEvent {
+    pub attribute: NftAttribute,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct RoyaltySetEvent {
+    pub percentage: u32,
+    pub recipient: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct ApprovedEvent {
+    pub owner: Address,
+    pub approved: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct OperatorApprovalSetEvent {
+    pub operator: Address,
+    pub approved: bool,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, PartialEq)]
+pub struct CollectionUpdatedEvent {
+    pub name: String,
+    pub description: String,
+    pub image: String,
 }
 
 // ============================================================================
@@ -174,6 +224,11 @@ impl NftMetadataContract {
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::CollectionMetadata, &collection);
         env.storage().instance().set(&DataKey::TokenCounter, &0u64);
+        
+        env.events().publish(
+            (symbol_short!("NftMeta"), symbol_short!("Init"), symbol_short!("v1"), ()),
+            InitializedEvent { admin, collection },
+        );
     }
 
     // ========================================================================
@@ -246,8 +301,8 @@ impl NftMetadataContract {
         env.storage().instance().set(&DataKey::TokenCounter, &token_id);
 
         env.events().publish(
-            (symbol_short!("mint"), token_id),
-            to,
+            (symbol_short!("NftMeta"), symbol_short!("Minted"), symbol_short!("v1"), token_id),
+            MintedEvent { to: to.clone(), metadata: metadata.clone() },
         );
 
         token_id
@@ -296,8 +351,8 @@ impl NftMetadataContract {
         env.storage().instance().set(&DataKey::TokenCounter, &token_id);
 
         env.events().publish(
-            (symbol_short!("mint"), token_id),
-            to,
+            (symbol_short!("NftMeta"), symbol_short!("Minted"), symbol_short!("v1"), token_id),
+            MintedEvent { to: to.clone(), metadata: final_metadata.clone() },
         );
 
         token_id
@@ -377,8 +432,8 @@ impl NftMetadataContract {
         env.storage().instance().set(&DataKey::NftMetadata(token_id), &metadata);
 
         env.events().publish(
-            (symbol_short!("updated"), token_id),
-            caller,
+            (symbol_short!("NftMeta"), symbol_short!("MetaUpd"), symbol_short!("v1"), token_id),
+            MetadataUpdatedEvent { name, description, image },
         );
     }
 
@@ -418,8 +473,8 @@ impl NftMetadataContract {
         env.storage().instance().set(&DataKey::NftMetadata(token_id), &metadata);
 
         env.events().publish(
-            (symbol_short!("attr_add"), token_id),
-            caller,
+            (symbol_short!("NftMeta"), symbol_short!("AttrAdd"), symbol_short!("v1"), token_id),
+            AttributeAddedEvent { attribute },
         );
     }
 
@@ -456,9 +511,13 @@ impl NftMetadataContract {
             .expect("token not found");
 
         metadata.royalty_percentage = percentage;
-        metadata.royalty_recipient = recipient;
+        metadata.royalty_recipient = recipient.clone();
 
         env.storage().instance().set(&DataKey::NftMetadata(token_id), &metadata);
+        env.events().publish(
+            (symbol_short!("NftMeta"), symbol_short!("RyltySet"), symbol_short!("v1"), token_id),
+            RoyaltySetEvent { percentage, recipient },
+        );
     }
 
     // ========================================================================
@@ -509,8 +568,8 @@ impl NftMetadataContract {
         env.storage().instance().remove(&DataKey::TokenApproval(token_id, from.clone()));
 
         env.events().publish(
-            (symbol_short!("transfer"), token_id),
-            (from, to),
+            (symbol_short!("NftMeta"), symbol_short!("Transfer"), symbol_short!("v1"), token_id),
+            TransferredEvent { from, to },
         );
     }
 
@@ -544,8 +603,8 @@ impl NftMetadataContract {
         env.storage().instance().set(&DataKey::TokenApproval(token_id, owner.clone()), &approved);
 
         env.events().publish(
-            (symbol_short!("approved"), token_id),
-            (owner, approved),
+            (symbol_short!("NftMeta"), symbol_short!("Approved"), symbol_short!("v1"), token_id),
+            ApprovedEvent { owner, approved },
         );
     }
 
@@ -571,8 +630,8 @@ impl NftMetadataContract {
         }
 
         env.events().publish(
-            (symbol_short!("approval_all"), owner.clone()),
-            (operator, approved),
+            (symbol_short!("NftMeta"), symbol_short!("OpAppSet"), symbol_short!("v1"), owner.clone()),
+            OperatorApprovalSetEvent { operator, approved },
         );
     }
 
@@ -661,9 +720,13 @@ impl NftMetadataContract {
 
         collection.name = name;
         collection.description = description;
-        collection.image = image;
+        collection.image = image.clone();
 
         env.storage().instance().set(&DataKey::CollectionMetadata, &collection);
+        env.events().publish(
+            (symbol_short!("NftMeta"), symbol_short!("CollUpd"), symbol_short!("v1"), ()),
+            CollectionUpdatedEvent { name, description, image },
+        );
     }
 
     /// Get total supply of tokens

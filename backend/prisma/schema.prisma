@@ -14,12 +14,19 @@ model User {
   id            String        @id @default(uuid())
   publicKey     String        @unique
   email         String?
+  parentUserId  String?
+  parentUser    User?         @relation("UserReferrals", fields: [parentUserId], references: [id])
+  referrals     User[]        @relation("UserReferrals")
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  deletedAt     DateTime?
+  createdBy     String?
+  updatedBy     String?
   transactions  Transaction[]
   kycCustomer   KycCustomer?
 
   @@index([publicKey])
+  @@index([parentUserId])
 }
 
 model Transaction {
@@ -34,8 +41,14 @@ model Transaction {
   stellarTxId   String?   @unique
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdBy     String?
+  updatedBy     String?
+  quoteId       String?   @unique
+  quote         Quote?    @relation(fields: [quoteId], references: [id])
 
   @@index([userId])
+  @@index([userId, assetCode, createdAt])
 }
 
 enum KYCStatus {
@@ -53,23 +66,29 @@ model KycCustomer {
   email       String?
   status      KYCStatus @default(PENDING)
   extraFields Json?
+  documents   Json?     // Stores uploaded document metadata/paths
+  encryptionIV String?  // Initialization Vector for AES encryption
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  deletedAt     DateTime?
+  createdBy     String?
+  updatedBy     String?
 
   @@index([userId])
 }
 
-model ContractEvent {
-  id              String   @id @default(uuid())
-  contractId      String
-  ledger          Int
-  ledgerClosedAt  String   // Storing as ISO string from RPC
-  txHash          String
-  eventType       String   // e.g., "swap", "deposit"
-  data            Json     // Parsed XDR data
-  createdAt       DateTime @default(now())
-
-  @@index([contractId])
-  @@index([eventType])
-  @@index([txHash])
+model Quote {
+  id                String       @id @default(uuid())
+  sellAsset         String
+  buyAsset          String
+  sellAmount        String
+  buyAmount         String
+  price             String
+  expiresAt         DateTime
+  transaction       Transaction?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  deletedAt         DateTime?
+  createdBy         String?
+  updatedBy         String?
 }

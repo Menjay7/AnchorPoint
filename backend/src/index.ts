@@ -10,8 +10,7 @@ import sep6Router from './api/routes/sep6.route';
 import sep38Router from './api/routes/sep38.route';
 import infoRouter from './api/routes/info.route';
 import metricsRouter from './api/routes/metrics.route';
-import eventsRouter from './api/routes/events.route';
-import { eventIndexer } from './services/event-indexer.service';
+import usersRouter from './api/routes/users.route';
 import { errorHandler } from './api/middleware/error.middleware';
 import { metricsMiddleware, connectionTracker } from './api/middleware/metrics.middleware';
 
@@ -100,7 +99,7 @@ app.use(connectionTracker);
 app.use(metricsMiddleware);
 
 app.use('/api/transactions', transactionsRouter);
-app.use('/api/events', eventsRouter);
+app.use('/api/users', usersRouter);
 
 // Prometheus metrics endpoint
 app.use('/metrics', metricsRouter);
@@ -111,11 +110,20 @@ app.use('/sep38', sep38Router);
 // SEP-1 Info endpoint
 app.use('/info', infoRouter);
 
+import authRouter from './api/routes/auth.route';
+
 // SEP-24 routes
 app.use('/sep24', sep24Router);
 
 // SEP-6 routes
 app.use('/sep6', sep6Router);
+
+// Auth routes (SEP-10)
+app.use('/auth', authRouter);
+
+// SEP-12 KYC routes
+import sep12Router from './api/routes/sep12.route';
+app.use('/sep12', sep12Router);
 
 // Global error handling middleware (must be last)
 app.use(errorHandler);
@@ -125,11 +133,6 @@ if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     logger.info(`Backend service listening at http://localhost:${PORT}`);
     logger.info(`API Documentation available at http://localhost:${PORT}/api-docs`);
-    
-    // Start the event indexer
-    eventIndexer.start().catch(err => {
-      logger.error('Failed to start event indexer:', err);
-    });
   });
 }
 

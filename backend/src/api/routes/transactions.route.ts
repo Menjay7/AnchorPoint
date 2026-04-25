@@ -10,6 +10,7 @@ const querySchema = z.object({
   page: z.string().optional().transform(v => parseInt(v || '1', 10)).pipe(z.number().min(1)),
   limit: z.string().optional().transform(v => parseInt(v || '10', 10)).pipe(z.number().min(1).max(50)),
   assetCode: z.string().optional(),
+  cursor: z.string().optional(),
 });
 
 /**
@@ -76,37 +77,38 @@ const querySchema = z.object({
  *               $ref: '#/components/schemas/Error'
  */
 router.get('/', authMiddleware, validate({ query: querySchema }), async (req: AuthRequest, res: Response) => {
-  const { page, limit, assetCode } = req.query as unknown as {
+  const { page, limit, assetCode, cursor } = req.query as unknown as {
     page: number;
     limit: number;
     assetCode?: string;
+    cursor?: string;
   };
   const publicKey = req.user!.publicKey;
 
   try {
+    const user = await prisma.user.findUnique({ where: { publicKey } });
+    if (!user) {
+      return res.status(404).json({ status: 'error', message: 'User not found' });
+    }
+
+    const whereClause = {
+      userId: user.id,
+      ...(assetCode && { assetCode }),
+    };
+
     const skip = (page - 1) * limit;
 
     const [transactions, total] = await Promise.all([
       prisma.transaction.findMany({
-        where: {
-          user: {
-            publicKey,
-          },
-          ...(assetCode && { assetCode }),
-        },
+        where: whereClause,
         orderBy: {
           createdAt: 'desc',
         },
-        skip,
         take: limit,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : { skip }),
       }),
       prisma.transaction.count({
-        where: {
-          user: {
-            publicKey,
-          },
-          ...(assetCode && { assetCode }),
-        },
+        where: whereClause,
       }),
     ]);
 

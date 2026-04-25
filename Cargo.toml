@@ -14,6 +14,7 @@ members = [
     "src/staking",
     "src/escrow_timelock",
     "src/bridge",
+    "src/oracle_medianizer",
     "src/random",
 ]
 resolver = "2"

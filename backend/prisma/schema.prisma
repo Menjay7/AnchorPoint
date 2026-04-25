@@ -58,3 +58,35 @@ model KycCustomer {
 
   @@index([userId])
 }
+
+enum ComplianceStatus {
+  COMPLIANT
+  NON_COMPLIANT
+  SUSPICIOUS
+}
+
+model AssetValidationResult {
+  id               String           @id @default(cuid())
+  assetCode        String
+  issuerPublicKey  String?
+  homeDomain       String?
+  complianceStatus ComplianceStatus
+  messages         String           // JSON-encoded string[]
+  rawToml          String?
+  lastCrawledAt    DateTime
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@unique([assetCode, issuerPublicKey])
+}
+
+model CrawlJobRecord {
+  id                String    @id @default(cuid())
+  startedAt         DateTime
+  completedAt       DateTime?
+  totalAssets       Int
+  compliantCount    Int
+  nonCompliantCount Int
+  suspiciousCount   Int
+  createdAt         DateTime  @default(now())
+}

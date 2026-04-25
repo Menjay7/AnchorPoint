@@ -13,7 +13,8 @@ members = [
     "src/kyc",
     "src/staking",
     "src/escrow_timelock",
-    "src/bridge"
+    "src/bridge",
+    "src/random",
 ]
 resolver = "2"
 

@@ -3,6 +3,9 @@ import { z } from 'zod';
 import prisma from '../../lib/prisma';
 import { authMiddleware, AuthRequest } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validate.middleware';
+import { stellarService } from '../../services/stellar.service';
+import { submissionLimiter } from '../middleware/rate-limit.middleware';
+
 
 const router = Router();
 
@@ -12,6 +15,11 @@ const querySchema = z.object({
   assetCode: z.string().optional(),
   cursor: z.string().optional(),
 });
+
+const submitSchema = z.object({
+  xdr: z.string().min(1, 'Transaction XDR is required'),
+});
+
 
 /**
  * @swagger
@@ -133,4 +141,77 @@ router.get('/', authMiddleware, validate({ query: querySchema }), async (req: Au
   }
 });
 
+/**
+ * @swagger
+ * /api/transactions/submit:
+ *   post:
+ *     summary: Submit a pre-signed transaction
+ *     description: Validates and submits a pre-signed Stellar transaction XDR to the network.
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - xdr
+ *             properties:
+ *               xdr:
+ *                 type: string
+ *                 description: Base64 encoded transaction XDR
+ *     responses:
+ *       200:
+ *         description: Transaction submitted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     hash:
+ *                       type: string
+ *                     ledger:
+ *                       type: number
+ *       400:
+ *         description: Invalid transaction or disallowed operation
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       429:
+ *         description: Rate limit exceeded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.post('/submit', authMiddleware, submissionLimiter, validate({ body: submitSchema }), async (req: AuthRequest, res: Response) => {
+  const { xdr } = req.body;
+
+  try {
+    const result = await stellarService.submitTransaction(xdr);
+    res.json({
+      status: 'success',
+      data: {
+        hash: result.hash,
+        ledger: result.ledger,
+      },
+    });
+  } catch (error: any) {
+    res.status(400).json({
+      status: 'error',
+      message: error.message,
+    });
+  }
+});
+
 export default router;
+

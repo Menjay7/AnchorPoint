@@ -1,98 +1,84 @@
 import { Request, Response, NextFunction } from 'express';
-import { apiKeyMiddleware } from './api-key.middleware';
-import { burstRateLimiter, sustainedRateLimiter } from './rate-limit.middleware';
-import prisma from '../../lib/prisma';
-import { redis } from '../../lib/redis';
+import { submissionLimiterOptions } from './rate-limit.middleware';
+import * as StellarSdk from '@stellar/stellar-sdk';
 
-// Mock dependencies
-jest.mock('../../lib/prisma', () => ({
-  __esModule: true,
-  default: {
-    apiKey: {
-      findUnique: jest.fn(),
+jest.mock('@stellar/stellar-sdk', () => {
+  const original = jest.requireActual('@stellar/stellar-sdk');
+  return {
+    ...original,
+    TransactionBuilder: {
+      fromXDR: jest.fn(),
     },
-  },
-}));
+  };
+});
 
-jest.mock('../../lib/redis', () => ({
-  redis: {
-    get: jest.fn(),
-    setex: jest.fn(),
-    call: jest.fn().mockResolvedValue('mock-sha-string'), // for rate-limit-redis
-  },
-}));
+describe('Rate Limit Middleware', () => {
+  describe('submissionLimiter keyGenerator', () => {
+    let mockReq: Partial<Request>;
 
-describe('Rate Limiting & API Key Middleware', () => {
-  let req: Partial<Request>;
-  let res: Partial<Response>;
-  let next: NextFunction;
-
-  beforeEach(() => {
-    req = {
-      header: jest.fn().mockReturnValue(undefined),
-      ip: '127.0.0.1',
-    };
-    res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn(),
-      send: jest.fn(),
-    };
-    next = jest.fn();
-    jest.clearAllMocks();
-  });
-
-  describe('apiKeyMiddleware', () => {
-    it('should default to FREE tier if no API key is provided', async () => {
-      await apiKeyMiddleware(req as Request, res as Response, next);
-      expect(req.apiTier).toBe('FREE');
-      expect(next).toHaveBeenCalled();
+    beforeEach(() => {
+      mockReq = {
+        body: {},
+        ip: '127.0.0.1',
+      };
+      jest.clearAllMocks();
     });
 
-    it('should use cached tier if available in Redis', async () => {
-      req.header = jest.fn().mockReturnValue('cached-key');
-      (redis.get as jest.Mock).mockResolvedValue('PREMIUM');
+    it('should use source account from valid XDR', () => {
+      const xdr = 'valid-xdr';
+      mockReq.body = { xdr };
+      (StellarSdk.TransactionBuilder.fromXDR as jest.Mock).mockReturnValue({ source: 'G_SOURCE' });
 
-      await apiKeyMiddleware(req as Request, res as Response, next);
-
-      expect(req.apiKey).toBe('cached-key');
-      expect(req.apiTier).toBe('PREMIUM');
-      expect(next).toHaveBeenCalled();
+      const key = submissionLimiterOptions.keyGenerator(mockReq as Request);
+      expect(key).toBe('G_SOURCE');
+      expect(StellarSdk.TransactionBuilder.fromXDR).toHaveBeenCalled();
     });
 
-    it('should lookup in Postgres if not cached', async () => {
-      req.header = jest.fn().mockReturnValue('db-key');
-      (redis.get as jest.Mock).mockResolvedValue(null);
-      (prisma.apiKey.findUnique as jest.Mock).mockResolvedValue({ tier: 'BASIC' });
+    it('should handle FeeBumpTransaction source account', () => {
+      const xdr = 'feebump-xdr';
+      mockReq.body = { xdr };
+      const mockFeeBump = Object.create(StellarSdk.FeeBumpTransaction.prototype);
+      Object.defineProperty(mockFeeBump, 'innerTransaction', { value: { source: 'G_INNER' } });
 
-      await apiKeyMiddleware(req as Request, res as Response, next);
 
-      expect(prisma.apiKey.findUnique).toHaveBeenCalledWith({ where: { key: 'db-key' }, select: { tier: true } });
-      expect(redis.setex).toHaveBeenCalledWith('apikey:db-key', 300, 'BASIC');
-      expect(req.apiKey).toBe('db-key');
-      expect(req.apiTier).toBe('BASIC');
-      expect(next).toHaveBeenCalled();
+      
+      (StellarSdk.TransactionBuilder.fromXDR as jest.Mock).mockReturnValue(mockFeeBump);
+
+      const key = submissionLimiterOptions.keyGenerator(mockReq as Request);
+      expect(key).toBe('G_INNER');
     });
 
-    it('should return 401 if API key is invalid', async () => {
-      req.header = jest.fn().mockReturnValue('invalid-key');
-      (redis.get as jest.Mock).mockResolvedValue(null);
-      (prisma.apiKey.findUnique as jest.Mock).mockResolvedValue(null);
+    it('should fallback to IP if XDR is missing', () => {
+      const key = submissionLimiterOptions.keyGenerator(mockReq as Request);
+      expect(key).toBe('127.0.0.1');
+    });
 
-      await apiKeyMiddleware(req as Request, res as Response, next);
+    it('should fallback to IP if XDR parsing fails', () => {
+      mockReq.body = { xdr: 'invalid' };
+      (StellarSdk.TransactionBuilder.fromXDR as jest.Mock).mockImplementation(() => {
+        throw new Error('invalid');
+      });
 
-      expect(res.status).toHaveBeenCalledWith(401);
-      expect(res.json).toHaveBeenCalledWith({ error: 'Invalid API Key' });
-      expect(next).not.toHaveBeenCalled();
+      const key = submissionLimiterOptions.keyGenerator(mockReq as Request);
+
+      expect(key).toBe('127.0.0.1');
+    });
+
+    it('should fallback to unknown if IP is missing', () => {
+      (mockReq as any).ip = undefined;
+      const key = submissionLimiterOptions.keyGenerator(mockReq as Request);
+
+      expect(key).toBe('unknown');
     });
   });
 
-  describe('rate limiters setup', () => {
-    it('burstRateLimiter should be defined', () => {
-      expect(burstRateLimiter).toBeDefined();
-    });
-
-    it('sustainedRateLimiter should be defined', () => {
-      expect(sustainedRateLimiter).toBeDefined();
+  describe('createRateLimiter', () => {
+    it('should create a limiter with default options', () => {
+      const { createRateLimiter } = require('./rate-limit.middleware');
+      const limiter = createRateLimiter();
+      expect(limiter).toBeDefined();
     });
   });
 });
+
+

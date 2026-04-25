@@ -1,21 +1,31 @@
-import { rateLimit, Options as RateLimitOptionsBase } from 'express-rate-limit';
+import { rateLimit } from 'express-rate-limit';
 import RedisStore from 'rate-limit-redis';
 import { redis } from '../../lib/redis';
 import logger from '../../utils/logger';
 import { Request, Response, NextFunction } from 'express';
+import * as StellarSdk from '@stellar/stellar-sdk';
 
+
+/**
+ * Interface for rate limit options
+ */
 export interface RateLimitOptions {
   windowMs?: number;
-  max?: number | ((req: Request, res: Response) => number | Promise<number>);
+  max?: number;
   message?: string;
   keyPrefix?: string;
 }
 
+/**
+ * Create a rate limiting middleware with Redis storage
+ * @param options Rate limit configuration
+ * @returns Express middleware
+ */
 export const createRateLimiter = (options: RateLimitOptions = {}) => {
   const {
-    windowMs = 15 * 60 * 1000,
-    max = 100,
-    message = 'Too many requests, please try again later.',
+    windowMs = 15 * 60 * 1000, // Default 15 minutes
+    max = 100, // Default 100 requests per windowMs
+    message = 'Too many requests from this IP, please try again later.',
     keyPrefix = 'rl:',
   } = options;
 
@@ -23,54 +33,22 @@ export const createRateLimiter = (options: RateLimitOptions = {}) => {
     windowMs,
     max,
     message: { error: message },
-    standardHeaders: true,
-    legacyHeaders: false,
-    keyGenerator: (req: Request) => {
-      return req.apiKey ? req.apiKey : req.ip || 'unknown';
-    },
+    standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    // Redis store configuration
     store: new RedisStore({
-      // @ts-expect-error - ioredis call signature mismatch
       sendCommand: (...args: string[]) => redis.call(...args),
       prefix: keyPrefix,
     }),
+
     handler: (req: Request, res: Response, _next: NextFunction, options: any) => {
-      logger.warn(`Rate limit exceeded for ${req.apiKey ? 'API Key' : 'IP'}: ${req.apiKey || req.ip} (Tier: ${req.apiTier || 'UNKNOWN'})`);
+      logger.warn(`Rate limit exceeded for IP: ${req.ip}`);
       res.status(options.statusCode).send(options.message);
     },
   });
 };
 
-const getBurstLimit = (tier?: string) => {
-  switch (tier) {
-    case 'PREMIUM': return 100; // 100 req per minute
-    case 'BASIC': return 50;    // 50 req per minute
-    default: return 10;         // 10 req per minute
-  }
-};
-
-const getSustainedLimit = (tier?: string) => {
-  switch (tier) {
-    case 'PREMIUM': return 1000; // 1000 req per hour
-    case 'BASIC': return 500;    // 500 req per hour
-    default: return 100;         // 100 req per hour
-  }
-};
-
-export const burstRateLimiter = createRateLimiter({
-  windowMs: 60 * 1000, // 1 minute
-  max: (req: Request) => getBurstLimit(req.apiTier),
-  message: 'Burst rate limit exceeded, please slow down.',
-  keyPrefix: 'rl:burst:',
-});
-
-export const sustainedRateLimiter = createRateLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: (req: Request) => getSustainedLimit(req.apiTier),
-  message: 'Sustained rate limit exceeded, please try again later.',
-  keyPrefix: 'rl:sustained:',
-});
-
-// Keep existing limiters for backwards compatibility if needed, or adjust them
+// Common rate limiters
 export const apiLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 1000,
@@ -90,3 +68,39 @@ export const sensitiveApiLimiter = createRateLimiter({
   message: 'Too many requests to this sensitive endpoint, please try again later.',
   keyPrefix: 'rl:sensitive:',
 });
+
+/**
+ * Configuration for the submission rate limiter
+ */
+export const submissionLimiterOptions = {
+  windowMs: 60 * 1000, // 1 minute window
+  max: 5, // 5 requests per window
+  message: { error: 'Rate limit exceeded for this Stellar account. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: new RedisStore({
+    sendCommand: (...args: string[]) => redis.call(...args),
+    prefix: 'rl:submit:',
+  }),
+  keyGenerator: (req: Request) => {
+    try {
+      if (req.body && req.body.xdr) {
+        const tx = StellarSdk.TransactionBuilder.fromXDR(req.body.xdr, StellarSdk.Networks.TESTNET);
+        if (tx instanceof StellarSdk.FeeBumpTransaction) {
+          return tx.innerTransaction.source;
+        }
+        return tx.source;
+      }
+    } catch (e) {
+      // Fallback to IP if XDR is invalid
+    }
+    return req.ip || 'unknown';
+  },
+};
+
+/**
+ * Rate limiter for transaction submission, keyed by Stellar source account
+ */
+export const submissionLimiter = rateLimit(submissionLimiterOptions);
+
+

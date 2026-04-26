@@ -2,6 +2,7 @@ import { Redis } from 'ioredis';
 import { PriceAggregationService, AggregatedPrice, PriceFetchOptions } from '../../services/price-aggregation.service';
 import { AdvancedCacheService, CacheAsideResult } from '../../services/advanced-cache.service';
 import logger from '../../utils/logger';
+import prisma from '../../lib/prisma';
 
 /**
  * Interface for price quote response as per SEP-38
@@ -18,6 +19,10 @@ export interface PriceQuote {
   confidence?: number;
   sources_used?: number;
   is_partial?: boolean;
+}
+
+export interface QuoteResponse extends PriceQuote {
+  id: string;
 }
 
 /**
@@ -296,10 +301,8 @@ export class Sep38Controller {
     );
 
     if (existingIndex !== -1) {
-      // Update existing asset
       SUPPORTED_ASSETS[existingIndex] = asset;
     } else {
-      // Add new asset
       SUPPORTED_ASSETS.push(asset);
     }
 

@@ -57,8 +57,9 @@ impl TokenContract {
             .instance()
             .set(&DataKey::TotalSupply(token_id), &(supply + amount));
 
+        // Topic: event name + token_id (u64 scalar); to + amount in data.
         env.events()
-            .publish((symbol_short!("mint"), to, token_id), amount);
+            .publish((symbol_short!("mint"), token_id), (to, amount));
     }
 
     pub fn transfer(env: Env, from: Address, to: Address, token_id: u64, amount: i128) {
@@ -82,8 +83,9 @@ impl TokenContract {
             Self::do_transfer(&env, from.clone(), to.clone(), token_id, amount);
         }
 
+        // Topic: event name only; from + to + token_ids in data.
         env.events()
-            .publish((symbol_short!("batch_xf"), from, to), token_ids);
+            .publish(symbol_short!("batch_xf"), (from, to, token_ids));
     }
 
     pub fn approve(env: Env, owner: Address, spender: Address, token_id: u64, amount: i128) {
@@ -93,8 +95,9 @@ impl TokenContract {
             &DataKey::Allowance(token_id, owner.clone(), spender.clone()),
             &amount,
         );
+        // Topic: event name + token_id (u64 scalar); owner + spender + amount in data.
         env.events()
-            .publish((symbol_short!("approve"), owner, spender, token_id), amount);
+            .publish((symbol_short!("approve"), token_id), (owner, spender, amount));
     }
 
     pub fn set_approval_for_all(env: Env, owner: Address, operator: Address, approved: bool) {
@@ -109,8 +112,9 @@ impl TokenContract {
                 .persistent()
                 .remove(&DataKey::OperatorApproval(owner.clone(), operator.clone()));
         }
+        // Topic: event name only; owner + operator + approved in data.
         env.events()
-            .publish((symbol_short!("app_all"), owner, operator), approved);
+            .publish(symbol_short!("app_all"), (owner, operator, approved));
     }
 
     pub fn transfer_from(
@@ -140,8 +144,9 @@ impl TokenContract {
         }
 
         Self::do_transfer(&env, from, to, token_id, amount);
+        // Topic: event name + token_id (u64 scalar); spender + amount in data.
         env.events()
-            .publish((symbol_short!("xfer_from"), spender, token_id), amount);
+            .publish((symbol_short!("xfer_from"), token_id), (spender, amount));
     }
 
     pub fn burn(env: Env, from: Address, token_id: u64, amount: i128) {
@@ -162,8 +167,9 @@ impl TokenContract {
             .instance()
             .set(&DataKey::TotalSupply(token_id), &(supply - amount));
 
+        // Topic: event name + token_id (u64 scalar); from + amount in data.
         env.events()
-            .publish((symbol_short!("burn"), from, token_id), amount);
+            .publish((symbol_short!("burn"), token_id), (from, amount));
     }
 
     pub fn set_token_metadata(env: Env, token_id: u64, uri: String) {
@@ -273,8 +279,9 @@ impl TokenContract {
             .persistent()
             .set(&DataKey::Balance(token_id, to.clone()), &(to_bal + amount));
 
+        // Topic: event name + token_id (u64 scalar); from + to + amount in data.
         env.events()
-            .publish((symbol_short!("transfer"), from, to, token_id), amount);
+            .publish((symbol_short!("transfer"), token_id), (from, to, amount));
     }
 
     fn _write_checkpoint(

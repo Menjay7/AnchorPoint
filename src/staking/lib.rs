@@ -105,8 +105,9 @@ impl StakingContract {
         env.storage()
             .persistent()
             .set(&DataKey::Stake(user.clone()), &info);
+        // Topic: event name only; user + amounts in data.
         env.events()
-            .publish((symbol_short!("stake"), user), (amount, info.lock_end));
+            .publish(symbol_short!("stake"), (user, amount, info.lock_end));
     }
 
     pub fn withdraw(env: Env, user: Address) {
@@ -154,9 +155,10 @@ impl StakingContract {
         let token_client = token::Client::new(&env, &token_addr);
         token_client.transfer(&env.current_contract_address(), &user, &total_to_send);
 
+        // Topic: event name only; user + amounts in data.
         env.events().publish(
-            (symbol_short!("withdraw"), user),
-            (amount_to_return, rewards),
+            symbol_short!("withdraw"),
+            (user, amount_to_return, rewards),
         );
     }
 
@@ -193,8 +195,9 @@ impl StakingContract {
         let token_client = token::Client::new(&env, &token_addr);
         token_client.transfer(&env.current_contract_address(), &user, &rewards);
 
+        // Topic: event name only; user + rewards in data.
         env.events()
-            .publish((symbol_short!("claim"), user), rewards);
+            .publish(symbol_short!("claim"), (user, rewards));
     }
 
     pub fn get_stake_info(env: Env, user: Address) -> StakeInfo {

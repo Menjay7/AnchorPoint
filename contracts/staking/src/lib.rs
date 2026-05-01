@@ -123,7 +123,10 @@ impl MultiTokenStaking {
                 .set(&DataKey::RewardPerTokenStored(reward_token.clone()), &rpt);
         }
 
+        // Topic: event name only; from + amount in data.
         env.events().publish(
+            symbol_short!("dep_rwd"),
+            (from, amount),
             (symbol_short!("dep_rwd"), from, reward_token),
             amount,
         );
@@ -158,7 +161,8 @@ impl MultiTokenStaking {
             .instance()
             .set(&DataKey::TotalStaked, &(total + amount));
 
-        env.events().publish((symbol_short!("staked"), user), amount);
+        // Topic: event name only; user + amount in data.
+        env.events().publish(symbol_short!("staked"), (user, amount));
     }
 
     pub fn unstake(env: Env, user: Address, amount: i128) {
@@ -190,7 +194,8 @@ impl MultiTokenStaking {
             &amount,
         );
 
-        env.events().publish((symbol_short!("unstaked"), user), amount);
+        // Topic: event name only; user + amount in data.
+        env.events().publish(symbol_short!("unstaked"), (user, amount));
     }
 
     // ── Claiming ──────────────────────────────────────────────────────────
@@ -218,6 +223,7 @@ impl MultiTokenStaking {
             );
 
             env.events()
+                .publish(symbol_short!("claimed"), (user, reward));
                 .publish((symbol_short!("claimed"), user, reward_token), reward);
         }
 
@@ -250,7 +256,9 @@ impl MultiTokenStaking {
                     &reward,
                 );
 
+                // Topic: event name only; user + reward in data.
                 env.events()
+                    .publish(symbol_short!("claimed"), (user.clone(), reward));
                     .publish((symbol_short!("claimed"), user.clone(), reward_token.clone()), reward);
             }
         }

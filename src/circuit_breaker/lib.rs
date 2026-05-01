@@ -139,6 +139,9 @@ impl CircuitBreaker {
         }
 
         bots.push_back(bot.clone());
+        // Topic: event name only; bot + caller Addresses in data.
+        env.storage().instance().set(&DataKey::AuthorizedBots, &bots);
+        env.events().publish(symbol_short!("bot_add"), (bot, caller));
         env.storage()
             .instance()
             .set(&DataKey::AuthorizedBots, &bots);
@@ -168,6 +171,9 @@ impl CircuitBreaker {
             }
         }
         assert!(found, "bot not found");
+        env.storage().instance().set(&DataKey::AuthorizedBots, &new_bots);
+        // Topic: event name only; bot + caller Addresses in data.
+        env.events().publish(symbol_short!("bot_rm"), (bot, caller));
         env.storage()
             .instance()
             .set(&DataKey::AuthorizedBots, &new_bots);
@@ -238,7 +244,7 @@ impl CircuitBreaker {
             None => {
                 // First observation — store and return without tripping.
                 env.events()
-                    .publish((symbol_short!("ref_set"), asset), current_price);
+                    .publish(symbol_short!("ref_set"), (asset, current_price));
                 return;
             }
             Some(p) => p,
@@ -257,14 +263,15 @@ impl CircuitBreaker {
 
         if deviation_bps >= volatility_bps {
             Self::apply_trip(&env, PauseTier::All, TriggerSource::Oracle, caller.clone());
+            // Topic: event name only; asset + deviation data in payload.
             env.events().publish(
-                (symbol_short!("vol_trip"), asset),
-                (deviation_bps, volatility_bps),
+                symbol_short!("vol_trip"),
+                (asset, deviation_bps, volatility_bps),
             );
         } else {
             env.events().publish(
-                (symbol_short!("vol_ok"), asset),
-                (deviation_bps, volatility_bps),
+                symbol_short!("vol_ok"),
+                (asset, deviation_bps, volatility_bps),
             );
         }
     }
@@ -302,9 +309,10 @@ impl CircuitBreaker {
             .instance()
             .set(&DataKey::PendingUnpauseTier, &target_tier);
 
+        // Topic: event name only; caller + unlocks_at + target_tier in data.
         env.events().publish(
-            (symbol_short!("unp_init"), caller),
-            (unlocks_at, target_tier),
+            symbol_short!("unp_init"),
+            (caller, unlocks_at, target_tier),
         );
     }
 
@@ -357,6 +365,9 @@ impl CircuitBreaker {
 
         assert!(unlocks_at > 0, "no unpause pending");
 
+        env.storage().instance().set(&DataKey::UnpauseUnlocksAt, &0u64);
+        // Topic: event name only; caller + unlocks_at in data.
+        env.events().publish(symbol_short!("unp_cncl"), (caller, unlocks_at));
         env.storage()
             .instance()
             .set(&DataKey::UnpauseUnlocksAt, &0u64);
@@ -371,6 +382,9 @@ impl CircuitBreaker {
         caller.require_auth();
         Self::assert_admin(&env, &caller);
         assert!(seconds > 0, "timelock must be positive");
+        env.storage().instance().set(&DataKey::TimelockSeconds, &seconds);
+        // Topic: event name only; caller + seconds in data.
+        env.events().publish(symbol_short!("tl_set"), (caller, seconds));
         env.storage()
             .instance()
             .set(&DataKey::TimelockSeconds, &seconds);
@@ -384,6 +398,8 @@ impl CircuitBreaker {
         Self::assert_admin(&env, &caller);
         assert!(bps > 0 && bps <= 10_000, "bps must be 1-10000");
         env.storage().instance().set(&DataKey::VolatilityBps, &bps);
+        // Topic: event name only; caller + bps in data.
+        env.events().publish(symbol_short!("vbps_set"), (caller, bps));
         env.events()
             .publish((symbol_short!("vbps_set"), caller), bps);
     }
@@ -392,6 +408,9 @@ impl CircuitBreaker {
     pub fn set_oracle(env: Env, caller: Address, oracle: Address) {
         caller.require_auth();
         Self::assert_admin(&env, &caller);
+        env.storage().instance().set(&DataKey::OracleContract, &oracle);
+        // Topic: event name only; oracle + caller Addresses in data.
+        env.events().publish(symbol_short!("ora_set"), (oracle, caller));
         env.storage()
             .instance()
             .set(&DataKey::OracleContract, &oracle);

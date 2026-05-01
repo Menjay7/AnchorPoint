@@ -74,6 +74,13 @@ impl LiquidationEngine {
 
         vault.collateral_amount = 0;
         vault.debt_amount = 0; // Assume debt fully cleared by liquidation
+        
+        env.storage().persistent().set(&DataKey::Vaults(vault_id), &vault);
+        
+        // Topic: event name only; vault_id (u32) + liquidator + incentive in data.
+        env.events().publish(
+            symbol_short!("liquidate"),
+            (vault_id, liquidator, incentive),
 
         env.storage()
             .persistent()

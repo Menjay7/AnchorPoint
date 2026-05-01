@@ -11,6 +11,7 @@ import sep6Router from './api/routes/sep6.route';
 import sep38Router from './api/routes/sep38.route';
 import infoRouter from './api/routes/info.route';
 import metricsRouter from './api/routes/metrics.route';
+import eventRouter from './api/routes/event.route';
 import notificationsRouter from './api/routes/notifications.route';
 import { errorHandler } from './api/middleware/error.middleware';
 import { metricsMiddleware, connectionTracker } from './api/middleware/metrics.middleware';
@@ -109,6 +110,7 @@ app.use(metricsMiddleware);
 
 app.use('/api/transactions', transactionsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/events', eventRouter);
 app.use('/api/notifications', notificationsRouter);
 
 // Prometheus metrics endpoint
